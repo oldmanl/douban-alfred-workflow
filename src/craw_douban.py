@@ -6,27 +6,21 @@ import sys
 from workflow import Workflow
 
 
-def search_movie(wf, r):
+def search_movie(wf, result):
     """搜索电影"""
-
-    result = r.json()
+    
     if result:
-        if len(result['subjects']):
-            subjects = result['subjects']
-            for subject in subjects:
-                average = subject['rating']['average']
-                title = subject['title']
-                alt = subject['alt']
-                year = subject['year']
-                casts = subject['casts']
-                actors = ''
-                if len(casts):
-                    for cast in casts:
-                        actors += cast['name'] + ' / '
-                wf.add_item(title=title + ' (' + year + ')', subtitle=u'评分:' + str(average) + '\t' + actors, arg=alt,
+        for item in result:
+            if item.has_key('rating'):
+                title = item['title']
+                rating_value = item['rating']['value']
+               
+                movie_time = item['abstract'][item['abstract'].rfind('/')+1:len(item['abstract'])]
+                actors = item['abstract_2']
+                wf.add_item(title=title , subtitle=movie_time + '\t'  + str(rating_value) + '\t' + actors ,arg=item['url'],
                             valid=True, icon='image/movie_item.png')
-        else:
-            wf.add_item(title=u'查询不到相关信息')
+    else:
+        wf.add_item(title=u'查询不到相关信息')
 
 
 def playing_movie(wf, soup):
@@ -46,6 +40,7 @@ def playing_movie(wf, soup):
 def main(wf):
     from bs4 import BeautifulSoup
     import requests
+    import douban
 
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'}
@@ -53,9 +48,7 @@ def main(wf):
     param = (wf.args[0] if len(wf.args) else '').strip().encode('utf-8')
 
     if param:
-        search_url = 'https://api.douban.com/v2/movie/search'
-        params = {'q': param, 'start': 0, 'count': 20}
-        r = requests.get(search_url, headers=headers, params=params)
+        r = douban.search(param)
         search_movie(wf, r)
     else:
         url = 'https://movie.douban.com/cinema/nowplaying/'
